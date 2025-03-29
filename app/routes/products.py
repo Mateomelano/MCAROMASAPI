@@ -1,39 +1,57 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 from typing import List
-from app.models import Producto
-from app.db import productos
+from app import schemas, models
+from app.database import SessionLocal
 
 router = APIRouter(
     prefix="/productos",
     tags=["Productos"]
 )
 
+# Dependency
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
 # Obtener todos los productos
-@router.get("/", response_model=List[Producto])
-def obtener_productos():
-    return productos
+@router.get("/", response_model=List[schemas.Producto])
+def obtener_productos(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    return db.query(models.Producto).offset(skip).limit(limit).all()
 
 # Agregar un producto
-@router.post("/", response_model=Producto)
-def agregar_producto(producto: Producto):
-    for p in productos:
-        if p.id == producto.id:
-            raise HTTPException(status_code=400, detail="ID de producto ya existe")
-    productos.append(producto)
-    return producto
+@router.post("/", response_model=schemas.Producto)
+def agregar_producto(producto: schemas.ProductoCreate, db: Session = Depends(get_db)):
+    db_producto = models.Producto(**producto.dict())
+    db.add(db_producto)
+    db.commit()
+    db.refresh(db_producto)
+    return db_producto
 
 # Editar un producto
-@router.put("/{id}", response_model=Producto)
-def editar_producto(id: int, producto_actualizado: Producto):
-    for i, p in enumerate(productos):
-        if p.id == id:
-            productos[i] = producto_actualizado
-            return producto_actualizado
-    raise HTTPException(status_code=404, detail="Producto no encontrado")
+@router.put("/{id}", response_model=schemas.Producto)
+def editar_producto(id: int, producto_actualizado: schemas.ProductoCreate, db: Session = Depends(get_db)):
+    producto = db.query(models.Producto).filter(models.Producto.id == id).first()
+    if not producto:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    
+    for key, value in producto_actualizado.dict().items():
+        setattr(producto, key, value)
+    
+    db.commit()
+    db.refresh(producto)
+    return producto
 
 # Eliminar un producto
 @router.delete("/{id}")
-def eliminar_producto(id: int):
-    global productos
-    productos = [p for p in productos if p.id != id]
+def eliminar_producto(id: int, db: Session = Depends(get_db)):
+    producto = db.query(models.Producto).filter(models.Producto.id == id).first()
+    if not producto:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    
+    db.delete(producto)
+    db.commit()
     return {"mensaje": "Producto eliminado"}

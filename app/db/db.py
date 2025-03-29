@@ -1,9 +1,17 @@
-from app.models import Producto
-from typing import List
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
+import os
+from dotenv import load_dotenv
 
-# Base de datos simulada en memoria
-productos: List[Producto] = [
-    Producto(id=1, nombre="Laptop", categoria="Electrónica", marca="Dell", precio=799.99, imagen="laptop.jpg", habilitado=True, descripcion="Laptop potente para trabajo y estudio"),
-    Producto(id=2, nombre="Teléfono", categoria="Electrónica", marca="Samsung", precio=599.99, imagen="telefono.jpg", habilitado=True, descripcion="Smartphone con excelente cámara"),
-    Producto(id=3, nombre="Teclado", categoria="Accesorios", marca="Logitech", precio=49.99, imagen="teclado.jpg", habilitado=True, descripcion="Teclado mecánico retroiluminado")
-]
+load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+# Para MySQL, usa 'mysql+pymysql://' - Para PostgreSQL, usa 'postgresql://'
+engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+def init_db():
+    from app import models
+    Base.metadata.create_all(bind=engine)
