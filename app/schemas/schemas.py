@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 
-class ProductoBase(BaseModel):
+class Producto(BaseModel):
+    id: int
     nombre: str
     categoria: str
     marca: str
@@ -8,12 +9,6 @@ class ProductoBase(BaseModel):
     imagen: str
     habilitado: bool
     descripcion: str
-
-class ProductoCreate(ProductoBase):
-    pass
-
-class Producto(ProductoBase):
-    id: int
 
     class Config:
         orm_mode = True

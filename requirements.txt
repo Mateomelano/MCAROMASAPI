@@ -1,5 +1,6 @@
 fastapi
 uvicorn
 sqlalchemy
-pymysql
+pydantic
 python-dotenv
+pymysql  # Si estás usando MySQL
